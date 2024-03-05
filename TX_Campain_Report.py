@@ -154,13 +154,11 @@ try:
     response = requests.get(f'https://graph.microsoft.com/v1.0/sites/{site_id}/drives', headers=headers)
 
     drive_id = None  # Initialize the variable to None
-    # Check if the request was successful
-    if response.status_code == 200:
-        drives = response.json().get('value', [])
-        for drive in drives:
-            if drive['name']== 'OneDrive':
-                drive_id = drive['id']
-                break  # Exit the loop as we found the drive ID
+    drives = response.json().get('value', [])
+    for drive in drives:
+        if drive['name']== 'OneDrive':
+            drive_id = drive['id']
+            break  # Exit the loop as we found the drive ID
 
     url = f'https://graph.microsoft.com/v1.0/drives/{drive_id}/root/children'
 
@@ -219,7 +217,7 @@ try:
                 # Store the DataFrame in the dictionary
                 webservices_dfs[key] = df
             else:
-                print(f"Failed to download {key}. Status code: {response.status_code}")
+                raise ValueError("Failed to download key.")
         except Exception as e:
             print(f"An error occurred: {e}")
 
@@ -317,7 +315,7 @@ try:
         for drive in drives:
             if drive['name']== 'OneDrive':
                 drive_id = drive['id']
-                break  # Exit the loop as we found the drive ID
+                break  #Exit the loop as we found the ID
 
     url = f'https://graph.microsoft.com/v1.0/drives/{drive_id}/root/children'
 
@@ -331,7 +329,7 @@ try:
     for item in items['value']:
         if item['name'] == 'Desktop':
             item_id = item['id']
-            break  # Exit the loop as we found the drive ID
+            break  #Exit the loop as we found the ID
 
     url = f'https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}/children'
 
@@ -354,7 +352,7 @@ try:
     for child in children:
         if child['name'] == 'HG Files':
             child_item_id = child['id']
-            break
+            break #Exit the loop as we found the ID
 
     url = f'https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{child_item_id}/children'
 
@@ -368,7 +366,7 @@ try:
     for child in nested_children:
         if child['name'] == 'Snowflake Excel Files':
             nested_child_item_id = child['id']
-            break
+            break #Exit the loop as we found the ID
 
     url = f'https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{nested_child_item_id}/children'
 
@@ -382,7 +380,7 @@ try:
     for child in nested_children_final:
         if child['name'] == 'Texas_PSO_Providers.csv':
             final_nested_child_item_id = child['id']
-            break
+            break #Exit the loop as we found the ID
 
     url = f'https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{final_nested_child_item_id}/content'
 
@@ -406,7 +404,7 @@ try:
     for child in nested_children_final:
         if child['name'] == 'Texas Onboarding Form_Stream.xlsx':
             final_nested_child_item_id = child['id']
-            break
+            break #Exit the loop as we found the ID
 
     url = f'https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{final_nested_child_item_id}/content'
 
@@ -459,13 +457,11 @@ try:
             
             set_clause = ", ".join(update_parts)
 
-            # Creating the SQL query for each row
             update_sql = f"""
                 UPDATE {table_name}
                 SET {set_clause}
                 WHERE "NPIorAPI" = '{single_row["NPIorAPI"]}' and "Tax ID TIN" is null
             """
-            # Executing the SQL query
             engine.execute(update_sql)
 
     #Reload onboarded providers with updated TaxIDs, Tax_NPIs
@@ -538,7 +534,6 @@ try:
         import_list[numeric_column_names] = import_list[numeric_column_names].astype(str)
 
         for i in range(len(chunks) - 1):
-            print(f"Inserting rows {chunks[i]} to {chunks[i + 1]}")
             import_list[chunks[i]:chunks[i + 1]].to_sql(table_name, engine, if_exists='append', index=False,dtype={'NPIorAPI': VARCHAR})
 
     #Reload providers with latest updates
@@ -584,21 +579,21 @@ try:
 
     table_name = '"PC_FIVETRAN_DB"."CAMPAIGN_REPORTING"."TEXAS"'
 
-    #Load updated LMS statuses for each provider, 
+    #Load latest LMS statuses for each provider
     for _, single_row in merged_df_final.iterrows():
 
         update_parts = [f'"{col}" = \'{single_row[col]}\' ' for col in single_row.index if col != 'TAX_NPI']
         
         set_clause = ", ".join(update_parts)
 
-        # Creating the SQL query for each row
         update_sql = f"""
             UPDATE {table_name}
             SET {set_clause}
             WHERE "TAX_NPI" = '{single_row["TAX_NPI"]}' and "LMS Status" != 'Completed'
         """
-        # Executing the SQL query
         engine.execute(update_sql)
+    logging.getLogger().setLevel(logging.INFO)
+    logging.info('Success')
 except Exception as e:
     logging.exception('Operation failed due to an error')
 logging.getLogger().setLevel(logging.ERROR)
